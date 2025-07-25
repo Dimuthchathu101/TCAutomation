@@ -55,7 +55,6 @@ def auto_fill_and_submit_form(form, base_url, username=None, password=None):
                 form_data[name] = password
                 continue
             form_data[name] = 'test'
-        # Use Playwright to submit the form and check for dashboard
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
@@ -69,9 +68,14 @@ def auto_fill_and_submit_form(form, base_url, username=None, password=None):
             # Click the first submit button in the form
             try:
                 submit_selector = 'form button[type=submit], form input[type=submit]'
-                page.click(submit_selector)
+                with page.expect_navigation(wait_until='networkidle', timeout=10000):
+                    page.click(submit_selector)
             except Exception:
-                page.evaluate('document.forms[0].submit()')
+                try:
+                    with page.expect_navigation(wait_until='networkidle', timeout=10000):
+                        page.evaluate('document.forms[0].submit()')
+                except Exception:
+                    pass
             # Wait for dashboard or error
             actual_result = ''
             dashboard_found = False
@@ -87,13 +91,93 @@ def auto_fill_and_submit_form(form, base_url, username=None, password=None):
             if dashboard_found:
                 actual_result = 'Form submitted successfully and dashboard loaded'
             else:
-                content = page.content()
+                try:
+                    content = page.content()
+                except Exception:
+                    content = ''
                 if 'Invalid credentials' in content or 'error' in content.lower():
                     actual_result = 'Form submission is broken! (error detected)'
                 else:
                     actual_result = 'Form submission failed or dashboard not loaded'
+            # If navigation occurred, extract further test cases from the new page
+            post_login_test_cases = []
+            if dashboard_found or page.url != base_url:
+                from bs4 import BeautifulSoup
+                new_soup = BeautifulSoup(page.content(), 'html.parser')
+                # Extract further test cases (no login credentials for post-login page)
+                post_login_test_cases = extract_elements(new_soup, page.url)
+                for tc in post_login_test_cases:
+                    tc['Notes'] = f"[Post-login] {tc.get('Notes','')}"
+                # --- NEW: Visit all sidebar links and test each section ---
+                sidebar_links = page.query_selector_all('nav a, .oxd-sidepanel a, .oxd-main-menu-item')
+                visited = set()
+                for link in sidebar_links:
+                    try:
+                        href = link.get_attribute('href')
+                        text = link.inner_text().strip()
+                        if not href or href in visited or href.startswith('javascript'): continue
+                        visited.add(href)
+                        # Open the link in the same page
+                        page.goto(href, timeout=10000)
+                        page.wait_for_load_state('networkidle', timeout=10000)
+                        section_html = page.content()
+                        section_soup = BeautifulSoup(section_html, 'html.parser')
+                        section_cases = extract_elements(section_soup, page.url)
+                        # --- Button click automation with DOM change detection ---
+                        for tc in section_cases:
+                            if tc['Type'] == 'Button':
+                                btn_text = tc['Element']
+                                try:
+                                    # Fill all fields in the form before clicking Search/Reset
+                                    form = page.query_selector('form')
+                                    if form:
+                                        # Fill text inputs
+                                        for input_tag in form.query_selector_all('input[type="text"]'):
+                                            input_tag.fill('test')
+                                        # Fill date inputs
+                                        for input_tag in form.query_selector_all('input[type="date"]'):
+                                            input_tag.fill('2025-01-01')
+                                        # Select dropdowns
+                                        for select_tag in form.query_selector_all('select'):
+                                            options = select_tag.query_selector_all('option:not([disabled])')
+                                            if len(options) > 1:
+                                                select_tag.select_option(value=options[1].get_attribute('value'))
+                                        # Check checkboxes/radios
+                                        for cb in form.query_selector_all('input[type="checkbox"]:not(:checked)'):
+                                            cb.check()
+                                        for rb in form.query_selector_all('input[type="radio"]'):
+                                            rb.check()
+                                    # Record DOM state before click (results area if present)
+                                    results_area = page.query_selector('.oxd-table, .oxd-table-body, .oxd-table-card, .oxd-table-row, .oxd-table-content, .oxd-table-list, .oxd-table-container, .oxd-table-wrapper, .oxd-table-filter, .oxd-table-header, .oxd-table-footer, .oxd-table-message')
+                                    dom_before = results_area.inner_html() if results_area else page.content()
+                                    # Try to click the button by visible text
+                                    btn = page.query_selector(f'button:has-text("{btn_text}")')
+                                    if not btn:
+                                        all_btns = page.query_selector_all('button')
+                                        idx = int(tc['Notes'].split('#')[-1].split()[0]) - 1 if '#' in tc['Notes'] else 0
+                                        if idx < len(all_btns):
+                                            btn = all_btns[idx]
+                                    screenshot_path = f'screenshot_{btn_text.replace(" ", "_")}_{idx}.png'
+                                    if btn:
+                                        btn.click()
+                                        page.wait_for_timeout(1500)
+                                        # Take screenshot after click
+                                        page.screenshot(path=screenshot_path)
+                                        dom_after = results_area.inner_html() if results_area else page.content()
+                                        if dom_before != dom_after:
+                                            tc['Actual Result'] = f'Button click triggered a DOM change (success) [Screenshot: {screenshot_path}]'
+                                        else:
+                                            tc['Actual Result'] = f'Button click did not change the DOM (may not be working) [Screenshot: {screenshot_path}]'
+                                    else:
+                                        tc['Actual Result'] = 'Button not found for automated click'
+                                except Exception as e:
+                                    tc['Actual Result'] = f'Button click error: {e}'
+                            tc['Notes'] = f"[Section: {text}] {tc.get('Notes','')}"
+                        post_login_test_cases.extend(section_cases)
+                    except Exception:
+                        continue
             browser.close()
-        return action, method, actual_result
+        return action, method, actual_result, post_login_test_cases
     # Handle input fields
     action = form.get('action') or base_url
     method = form.get('method', 'get').upper()
@@ -225,8 +309,16 @@ def auto_fill_and_submit_form(form, base_url, username=None, password=None):
 
 def extract_elements(soup, base_url, username=None, password=None):
     test_cases = []
+    form_success = False
+    post_login_cases = []
     for idx, form in enumerate(soup.find_all('form')):
-        action, method, actual_result = auto_fill_and_submit_form(form, base_url, username, password)
+        # Updated: auto_fill_and_submit_form may return post_login_test_cases
+        result = auto_fill_and_submit_form(form, base_url, username, password)
+        if isinstance(result, tuple) and len(result) == 4:
+            action, method, actual_result, post_login_test_cases = result
+            post_login_cases.extend(post_login_test_cases)
+        else:
+            action, method, actual_result = result
         test_cases.append({
             'Type': 'Form',
             'Action': f"Submit {method} form",
@@ -235,16 +327,19 @@ def extract_elements(soup, base_url, username=None, password=None):
             'Actual Result': actual_result,
             'Notes': f"Form #{idx+1} on page"
         })
-    for idx, button in enumerate(soup.find_all('button')):
-        btn_text = button.get_text(strip=True)
-        test_cases.append({
-            'Type': 'Button',
-            'Action': 'Click button',
-            'Element': btn_text or 'Unnamed button',
-            'Expected Result': 'Button click triggers expected action',
-            'Actual Result': 'Button is not working!',
-            'Notes': f"Button #{idx+1} on page"
-        })
+        if username and password and 'dashboard loaded' in actual_result.lower():
+            form_success = True
+    if not form_success:
+        for idx, button in enumerate(soup.find_all('button')):
+            btn_text = button.get_text(strip=True)
+            test_cases.append({
+                'Type': 'Button',
+                'Action': 'Click button',
+                'Element': btn_text or 'Unnamed button',
+                'Expected Result': 'Button click triggers expected action',
+                'Actual Result': 'Button is not working!',
+                'Notes': f"Button #{idx+1} on page"
+            })
     for idx, link in enumerate(soup.find_all('a', href=True)):
         href = urljoin(base_url, link['href'])
         link_text = link.get_text(strip=True)
@@ -256,6 +351,8 @@ def extract_elements(soup, base_url, username=None, password=None):
             'Actual Result': 'Navigates to linked page',
             'Notes': f"Link #{idx+1} on page"
         })
+    # Add post-login/dashboard test cases if any
+    test_cases.extend(post_login_cases)
     return test_cases
 
 def extract_elements_from_jsx(js_content, base_url):
