@@ -18,6 +18,17 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 
+# Computer Vision imports
+try:
+    from ultralytics import YOLO
+    import supervision as sv
+    import cv2
+    from PIL import Image
+    import matplotlib.pyplot as plt
+    COMPUTER_VISION_AVAILABLE = True
+except ImportError:
+    COMPUTER_VISION_AVAILABLE = False
+
 try:
     from git import Repo
 except ImportError:
@@ -120,6 +131,14 @@ class WebsiteIntelligence:
         self.tested_links = set()
         self.tested_forms = set()
         self.tested_cards = set()
+        
+        # Computer Vision models and tools
+        self.cv_models = {}
+        self.element_detectors = {}
+        self.visual_analysis_enabled = COMPUTER_VISION_AVAILABLE
+        
+        if self.visual_analysis_enabled:
+            self.initialize_computer_vision_models()
     
     def reset_test_tracking(self):
         """Reset tracking of tested elements for new website"""
@@ -1016,6 +1035,276 @@ class WebsiteIntelligence:
             return 'sharing_feature'
         else:
             return 'social_network'
+    
+    def initialize_computer_vision_models(self):
+        """Initialize computer vision models for web element detection"""
+        try:
+            # Initialize YOLO model for general object detection
+            self.cv_models['yolo'] = YOLO('yolov8n.pt')
+            
+            # Define web element classes for detection
+            self.element_classes = {
+                'button': ['button', 'btn', 'submit', 'click'],
+                'form': ['form', 'input', 'field', 'textbox'],
+                'link': ['link', 'a', 'href', 'navigation'],
+                'image': ['img', 'picture', 'photo', 'icon'],
+                'text': ['text', 'paragraph', 'heading', 'label'],
+                'table': ['table', 'grid', 'data', 'list'],
+                'video': ['video', 'player', 'media'],
+                'modal': ['modal', 'popup', 'dialog', 'overlay']
+            }
+            
+            print("Computer Vision models initialized successfully")
+            
+        except Exception as e:
+            print(f"Failed to initialize Computer Vision models: {e}")
+            self.visual_analysis_enabled = False
+    
+    def capture_website_screenshot(self, url, page=None):
+        """Capture screenshot of the website for visual analysis"""
+        try:
+            if page:
+                # Use existing Playwright page
+                screenshot_path = tempfile.mktemp(suffix='.png')
+                page.screenshot(path=screenshot_path, full_page=True)
+                return screenshot_path
+            else:
+                # Use Playwright to capture screenshot
+                from playwright.sync_api import sync_playwright
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True)
+                    page = browser.new_page()
+                    page.goto(url, timeout=15000)
+                    screenshot_path = tempfile.mktemp(suffix='.png')
+                    page.screenshot(path=screenshot_path, full_page=True)
+                    browser.close()
+                    return screenshot_path
+        except Exception as e:
+            print(f"Failed to capture screenshot: {e}")
+            return None
+    
+    def analyze_visual_elements(self, screenshot_path):
+        """Analyze visual elements in the screenshot using computer vision"""
+        if not self.visual_analysis_enabled or not screenshot_path:
+            return {}
+        
+        try:
+            # Load the image
+            image = cv2.imread(screenshot_path)
+            if image is None:
+                return {}
+            
+            # Run YOLO detection
+            results = self.cv_models['yolo'](image)
+            
+            # Process results
+            visual_elements = {
+                'buttons': [],
+                'forms': [],
+                'links': [],
+                'images': [],
+                'text_areas': [],
+                'tables': [],
+                'videos': [],
+                'modals': []
+            }
+            
+            # Process detections
+            for result in results:
+                boxes = result.boxes
+                if boxes is not None:
+                    for box in boxes:
+                        # Get bounding box coordinates
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        confidence = box.conf[0].cpu().numpy()
+                        class_id = int(box.cls[0].cpu().numpy())
+                        class_name = result.names[class_id]
+                        
+                        # Map YOLO classes to web elements
+                        element_type = self.map_yolo_class_to_web_element(class_name)
+                        
+                        if element_type and confidence > 0.5:  # Confidence threshold
+                            visual_elements[element_type].append({
+                                'bbox': [int(x1), int(y1), int(x2), int(y2)],
+                                'confidence': float(confidence),
+                                'class': class_name,
+                                'center': [int((x1 + x2) / 2), int((y1 + y2) / 2)]
+                            })
+            
+            # Clean up screenshot
+            os.remove(screenshot_path)
+            
+            return visual_elements
+            
+        except Exception as e:
+            print(f"Visual analysis failed: {e}")
+            return {}
+    
+    def map_yolo_class_to_web_element(self, yolo_class):
+        """Map YOLO detection classes to web element types"""
+        class_mapping = {
+            'person': None,  # Not relevant for web elements
+            'bicycle': None,
+            'car': None,
+            'motorcycle': None,
+            'airplane': None,
+            'bus': None,
+            'train': None,
+            'truck': None,
+            'boat': None,
+            'traffic light': None,
+            'fire hydrant': None,
+            'stop sign': None,
+            'parking meter': None,
+            'bench': None,
+            'bird': None,
+            'cat': None,
+            'dog': None,
+            'horse': None,
+            'sheep': None,
+            'cow': None,
+            'elephant': None,
+            'bear': None,
+            'zebra': None,
+            'giraffe': None,
+            'backpack': None,
+            'umbrella': None,
+            'handbag': None,
+            'tie': None,
+            'suitcase': None,
+            'frisbee': None,
+            'skis': None,
+            'snowboard': None,
+            'sports ball': None,
+            'kite': None,
+            'baseball bat': None,
+            'baseball glove': None,
+            'skateboard': None,
+            'surfboard': None,
+            'tennis racket': None,
+            'bottle': None,
+            'wine glass': None,
+            'cup': None,
+            'fork': None,
+            'knife': None,
+            'spoon': None,
+            'bowl': None,
+            'banana': None,
+            'apple': None,
+            'sandwich': None,
+            'orange': None,
+            'broccoli': None,
+            'carrot': None,
+            'hot dog': None,
+            'pizza': None,
+            'donut': None,
+            'cake': None,
+            'chair': None,
+            'couch': None,
+            'potted plant': None,
+            'bed': None,
+            'dining table': None,
+            'toilet': None,
+            'tv': 'video',
+            'laptop': None,
+            'mouse': None,
+            'remote': None,
+            'keyboard': None,
+            'cell phone': None,
+            'microwave': None,
+            'oven': None,
+            'toaster': None,
+            'sink': None,
+            'refrigerator': None,
+            'book': 'text',
+            'clock': None,
+            'vase': None,
+            'scissors': None,
+            'teddy bear': None,
+            'hair drier': None,
+            'toothbrush': None
+        }
+        
+        return class_mapping.get(yolo_class, None)
+    
+    def detect_visual_buttons(self, visual_elements):
+        """Detect buttons using visual analysis"""
+        buttons = []
+        
+        # Look for rectangular shapes that could be buttons
+        for element_type, elements in visual_elements.items():
+            for element in elements:
+                bbox = element['bbox']
+                width = bbox[2] - bbox[0]
+                height = bbox[3] - bbox[1]
+                
+                # Button-like characteristics
+                if (width > 50 and height > 20 and 
+                    width < 300 and height < 100 and
+                    element['confidence'] > 0.6):
+                    buttons.append({
+                        'bbox': bbox,
+                        'confidence': element['confidence'],
+                        'type': 'visual_button',
+                        'size': [width, height],
+                        'center': element['center']
+                    })
+        
+        return buttons
+    
+    def detect_visual_forms(self, visual_elements):
+        """Detect forms using visual analysis"""
+        forms = []
+        
+        # Look for input-like elements
+        for element_type, elements in visual_elements.items():
+            for element in elements:
+                bbox = element['bbox']
+                width = bbox[2] - bbox[0]
+                height = bbox[3] - bbox[1]
+                
+                # Form-like characteristics
+                if (width > 100 and height > 20 and
+                    element['confidence'] > 0.5):
+                    forms.append({
+                        'bbox': bbox,
+                        'confidence': element['confidence'],
+                        'type': 'visual_form',
+                        'size': [width, height],
+                        'center': element['center']
+                    })
+        
+        return forms
+    
+    def generate_visual_test_cases(self, visual_elements, url):
+        """Generate test cases based on visual analysis"""
+        test_cases = []
+        
+        # Visual button test cases
+        visual_buttons = self.detect_visual_buttons(visual_elements)
+        for i, button in enumerate(visual_buttons):
+            test_cases.append({
+                'Type': 'Visual Button',
+                'Action': f'Click visually detected button {i+1}',
+                'Element': f'Button at position {button["center"]}',
+                'Expected Result': 'Button should be clickable and functional',
+                'Actual Result': 'Visual button detection test case generated',
+                'Notes': f'[Computer Vision] Confidence: {button["confidence"]:.2f}, Size: {button["size"]}'
+            })
+        
+        # Visual form test cases
+        visual_forms = self.detect_visual_forms(visual_elements)
+        for i, form in enumerate(visual_forms):
+            test_cases.append({
+                'Type': 'Visual Form',
+                'Action': f'Interact with visually detected form {i+1}',
+                'Element': f'Form at position {form["center"]}',
+                'Expected Result': 'Form should be interactive and functional',
+                'Actual Result': 'Visual form detection test case generated',
+                'Notes': f'[Computer Vision] Confidence: {form["confidence"]:.2f}, Size: {form["size"]}'
+            })
+        
+        return test_cases
 
 # Initialize the intelligence system
 website_intelligence = WebsiteIntelligence()
@@ -1597,105 +1886,137 @@ def extract_elements(soup, base_url, username=None, password=None):
             'Notes': '[ML Intelligence - Optimized]'
         })
         
+                # --- COMPUTER VISION ANALYSIS ---
+        if website_intelligence.visual_analysis_enabled:
+            try:
+                # Capture screenshot for visual analysis
+                screenshot_path = website_intelligence.capture_website_screenshot(base_url)
+                if screenshot_path:
+                    # Analyze visual elements
+                    visual_elements = website_intelligence.analyze_visual_elements(screenshot_path)
+                    
+                    # Generate visual test cases
+                    visual_test_cases = website_intelligence.generate_visual_test_cases(visual_elements, base_url)
+                    test_cases.extend(visual_test_cases)
+                    
+                    # Add visual analysis summary
+                    test_cases.append({
+                        'Type': 'Computer Vision',
+                        'Action': 'Analyze website visual elements',
+                        'Element': 'Visual Element Detection',
+                        'Expected Result': 'Successfully detect visual elements',
+                        'Actual Result': f'Detected {sum(len(elements) for elements in visual_elements.values())} visual elements',
+                        'Notes': '[Computer Vision] Visual analysis completed successfully'
+                    })
+            except Exception as e:
+                test_cases.append({
+                    'Type': 'Computer Vision',
+                    'Action': 'Analyze website visual elements',
+                    'Element': 'Visual Element Detection',
+                    'Expected Result': 'Successfully detect visual elements',
+                    'Actual Result': f'Visual analysis failed: {str(e)}',
+                    'Notes': '[Computer Vision] Error in visual analysis'
+                })
+        
         # --- EDUCATIONAL PLATFORM ANALYSIS ---
         if analysis["website_type"] in ['educational', 'career_platform']:
-                # Detect educational platform elements
-                educational_elements = website_intelligence.detect_educational_elements(soup, base_url)
-                
-                # Generate educational platform test cases with detailed steps
-                for category in educational_elements['course_categories']:
-                    test_steps = website_intelligence.generate_educational_test_steps('course_category', category, base_url)
-                    test_cases.append({
-                        'Type': 'Course Category',
-                        'Action': f'Test {category["name"]} category functionality',
-                        'Element': f'{category["name"]} Category ({category.get("count", "N/A")} courses)',
-                        'Expected Result': f'{category["name"]} category should work correctly',
-                        'Actual Result': 'Course category test case generated',
-                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
-                    })
-                
-                for action in educational_elements['learning_actions']:
-                    test_steps = website_intelligence.generate_educational_test_steps('learning_action', action, base_url)
-                    test_cases.append({
-                        'Type': 'Learning Action',
-                        'Action': f'Test {action["action"]} functionality',
-                        'Element': f'{action["action"]} ({action["type"]})',
-                        'Expected Result': f'{action["action"]} should work correctly',
-                        'Actual Result': 'Learning action test case generated',
-                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
-                    })
-                
-                for tool in educational_elements['career_tools']:
-                    test_steps = website_intelligence.generate_educational_test_steps('career_tool', tool, base_url)
-                    test_cases.append({
-                        'Type': 'Career Tool',
-                        'Action': f'Test {tool["tool"]} functionality',
-                        'Element': f'{tool["tool"]} ({tool["type"]})',
-                        'Expected Result': f'{tool["tool"]} should work correctly',
-                        'Actual Result': 'Career tool test case generated',
-                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
-                    })
-                
-                for app in educational_elements['app_features']:
-                    test_steps = website_intelligence.generate_educational_test_steps('app_download', app, base_url)
-                    test_cases.append({
-                        'Type': 'App Feature',
-                        'Action': f'Test {app["feature"]} functionality',
-                        'Element': f'{app["feature"]} ({app["type"]})',
-                        'Expected Result': f'{app["feature"]} should work correctly',
-                        'Actual Result': 'App feature test case generated',
-                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
-                    })
-                
-                for solution in educational_elements['business_solutions']:
-                    test_steps = website_intelligence.generate_educational_test_steps('business_solution', solution, base_url)
-                    test_cases.append({
-                        'Type': 'Business Solution',
-                        'Action': f'Test {solution["solution"]} functionality',
-                        'Element': f'{solution["solution"]} ({solution["type"]})',
-                        'Expected Result': f'{solution["solution"]} should work correctly',
-                        'Actual Result': 'Business solution test case generated',
-                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
-                    })
-                
-                for social in educational_elements['social_features']:
-                    test_steps = website_intelligence.generate_educational_test_steps('social_feature', social, base_url)
-                    test_cases.append({
-                        'Type': 'Social Feature',
-                        'Action': f'Test {social["feature"]} functionality',
-                        'Element': f'{social["feature"]} ({social["type"]})',
-                        'Expected Result': f'{social["feature"]} should work correctly',
-                        'Actual Result': 'Social feature test case generated',
-                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
-                    })
-                
-                # Add general educational platform functionality tests
+            # Detect educational platform elements
+            educational_elements = website_intelligence.detect_educational_elements(soup, base_url)
+            
+            # Generate educational platform test cases with detailed steps
+            for category in educational_elements['course_categories']:
+                test_steps = website_intelligence.generate_educational_test_steps('course_category', category, base_url)
                 test_cases.append({
-                    'Type': 'Educational Platform',
-                    'Action': 'Test course search functionality',
-                    'Element': 'Course Search',
-                    'Expected Result': 'Search should find relevant courses',
-                    'Actual Result': 'Course search test case generated',
-                    'Notes': '[Educational Platform] Test Steps: 1. Navigate to website | 2. Locate search bar | 3. Enter course name | 4. Verify results | 5. Test filters | 6. Test course preview'
+                    'Type': 'Course Category',
+                    'Action': f'Test {category["name"]} category functionality',
+                    'Element': f'{category["name"]} Category ({category.get("count", "N/A")} courses)',
+                    'Expected Result': f'{category["name"]} category should work correctly',
+                    'Actual Result': 'Course category test case generated',
+                    'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
                 })
-                
+            
+            for action in educational_elements['learning_actions']:
+                test_steps = website_intelligence.generate_educational_test_steps('learning_action', action, base_url)
                 test_cases.append({
-                    'Type': 'Educational Platform',
-                    'Action': 'Test user registration process',
-                    'Element': 'User Registration',
-                    'Expected Result': 'Registration should create account successfully',
-                    'Actual Result': 'Registration test case generated',
-                    'Notes': '[Educational Platform] Test Steps: 1. Click Sign Up | 2. Fill required fields | 3. Verify email validation | 4. Submit form | 5. Check confirmation | 6. Test email verification'
+                    'Type': 'Learning Action',
+                    'Action': f'Test {action["action"]} functionality',
+                    'Element': f'{action["action"]} ({action["type"]})',
+                    'Expected Result': f'{action["action"]} should work correctly',
+                    'Actual Result': 'Learning action test case generated',
+                    'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
                 })
-                
+            
+            for tool in educational_elements['career_tools']:
+                test_steps = website_intelligence.generate_educational_test_steps('career_tool', tool, base_url)
                 test_cases.append({
-                    'Type': 'Educational Platform',
-                    'Action': 'Test course enrollment process',
-                    'Element': 'Course Enrollment',
-                    'Expected Result': 'Enrollment should grant course access',
-                    'Actual Result': 'Enrollment test case generated',
-                    'Notes': '[Educational Platform] Test Steps: 1. Browse courses | 2. Select course | 3. Click Start Course | 4. Verify enrollment | 5. Access course content | 6. Track progress'
+                    'Type': 'Career Tool',
+                    'Action': f'Test {tool["tool"]} functionality',
+                    'Element': f'{tool["tool"]} ({tool["type"]})',
+                    'Expected Result': f'{tool["tool"]} should work correctly',
+                    'Actual Result': 'Career tool test case generated',
+                    'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
                 })
+            
+            for app in educational_elements['app_features']:
+                test_steps = website_intelligence.generate_educational_test_steps('app_download', app, base_url)
+                test_cases.append({
+                    'Type': 'App Feature',
+                    'Action': f'Test {app["feature"]} functionality',
+                    'Element': f'{app["feature"]} ({app["type"]})',
+                    'Expected Result': f'{app["feature"]} should work correctly',
+                    'Actual Result': 'App feature test case generated',
+                    'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                })
+            
+            for solution in educational_elements['business_solutions']:
+                test_steps = website_intelligence.generate_educational_test_steps('business_solution', solution, base_url)
+                test_cases.append({
+                    'Type': 'Business Solution',
+                    'Action': f'Test {solution["solution"]} functionality',
+                    'Element': f'{solution["solution"]} ({solution["type"]})',
+                    'Expected Result': f'{solution["solution"]} should work correctly',
+                    'Actual Result': 'Business solution test case generated',
+                    'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                })
+            
+            for social in educational_elements['social_features']:
+                test_steps = website_intelligence.generate_educational_test_steps('social_feature', social, base_url)
+                test_cases.append({
+                    'Type': 'Social Feature',
+                    'Action': f'Test {social["feature"]} functionality',
+                    'Element': f'{social["feature"]} ({social["type"]})',
+                    'Expected Result': f'{social["feature"]} should work correctly',
+                    'Actual Result': 'Social feature test case generated',
+                    'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                })
+            
+            # Add general educational platform functionality tests
+            test_cases.append({
+                'Type': 'Educational Platform',
+                'Action': 'Test course search functionality',
+                'Element': 'Course Search',
+                'Expected Result': 'Search should find relevant courses',
+                'Actual Result': 'Course search test case generated',
+                'Notes': '[Educational Platform] Test Steps: 1. Navigate to website | 2. Locate search bar | 3. Enter course name | 4. Verify results | 5. Test filters | 6. Test course preview'
+            })
+            
+            test_cases.append({
+                'Type': 'Educational Platform',
+                'Action': 'Test user registration process',
+                'Element': 'User Registration',
+                'Expected Result': 'Registration should create account successfully',
+                'Actual Result': 'Registration test case generated',
+                'Notes': '[Educational Platform] Test Steps: 1. Click Sign Up | 2. Fill required fields | 3. Verify email validation | 4. Submit form | 5. Check confirmation | 6. Test email verification'
+            })
+            
+            test_cases.append({
+                'Type': 'Educational Platform',
+                'Action': 'Test course enrollment process',
+                'Element': 'Course Enrollment',
+                'Expected Result': 'Enrollment should grant course access',
+                'Actual Result': 'Enrollment test case generated',
+                'Notes': '[Educational Platform] Test Steps: 1. Browse courses | 2. Select course | 3. Click Start Course | 4. Verify enrollment | 5. Access course content | 6. Track progress'
+            })
         
     except Exception as e:
         test_cases.append({
