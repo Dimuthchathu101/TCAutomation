@@ -36,15 +36,15 @@ class WebsiteIntelligence:
         self.element_patterns = {
             'login_forms': [
                 'login', 'signin', 'sign_in', 'auth', 'authentication',
-                'username', 'password', 'email', 'user', 'pass'
+                'username', 'password', 'email', 'user', 'pass', 'log in'
             ],
             'registration_forms': [
                 'register', 'signup', 'sign_up', 'create_account', 'join',
-                'new_user', 'sign_up', 'registration'
+                'new_user', 'sign_up', 'registration', 'sign up'
             ],
             'search_forms': [
                 'search', 'find', 'lookup', 'query', 'filter',
-                'keyword', 'term', 'look_for'
+                'keyword', 'term', 'look_for', 'explore', 'discover'
             ],
             'contact_forms': [
                 'contact', 'message', 'inquiry', 'support', 'help',
@@ -61,6 +61,32 @@ class WebsiteIntelligence:
             'data_tables': [
                 'table', 'grid', 'list', 'results', 'data',
                 'records', 'items', 'products', 'users'
+            ],
+            # Alison.com specific patterns
+            'course_categories': [
+                'it', 'health', 'language', 'business', 'management',
+                'personal development', 'sales', 'marketing', 'engineering',
+                'teaching', 'academics', 'certificate', 'diploma', 'course'
+            ],
+            'learning_actions': [
+                'learn', 'study', 'enroll', 'start course', 'begin learning',
+                'take course', 'complete', 'finish', 'progress', 'continue'
+            ],
+            'career_tools': [
+                'career', 'job', 'resume', 'cv', 'profile', 'assessment',
+                'personality', 'aptitude', 'skills', 'hire', 'employment'
+            ],
+            'app_download': [
+                'app', 'download', 'mobile', 'android', 'ios', 'play store',
+                'app store', 'qr code', 'scan', 'install'
+            ],
+            'business_solutions': [
+                'lms', 'business', 'organization', 'team', 'employee',
+                'training', 'upskill', 'corporate', 'enterprise'
+            ],
+            'social_features': [
+                'share', 'affiliate', 'refer', 'friend', 'community',
+                'social', 'network', 'connect'
             ]
         }
         
@@ -70,7 +96,10 @@ class WebsiteIntelligence:
             'social': ['profile', 'friend', 'follow', 'share', 'like', 'comment'],
             'admin': ['admin', 'dashboard', 'manage', 'control', 'settings'],
             'portal': ['portal', 'gateway', 'access', 'login', 'dashboard'],
-            'landing': ['landing', 'home', 'welcome', 'hero', 'cta']
+            'landing': ['landing', 'home', 'welcome', 'hero', 'cta'],
+            'educational': ['course', 'learn', 'study', 'education', 'training', 'certificate', 'diploma', 'lms', 'learning'],
+            'career_platform': ['career', 'job', 'resume', 'employment', 'hire', 'recruitment', 'skills'],
+            'mobile_app': ['app', 'mobile', 'download', 'android', 'ios', 'play store', 'app store']
         }
         
         self.form_field_patterns = {
@@ -78,7 +107,10 @@ class WebsiteIntelligence:
             'contact_info': ['email', 'phone', 'mobile', 'address', 'city', 'zip'],
             'credentials': ['username', 'password', 'confirm', 'verify'],
             'payment_info': ['card', 'credit', 'debit', 'cvv', 'expiry', 'billing'],
-            'preferences': ['preference', 'setting', 'option', 'choice', 'select']
+            'preferences': ['preference', 'setting', 'option', 'choice', 'select'],
+            'educational_info': ['course', 'subject', 'level', 'duration', 'certificate', 'diploma', 'skill'],
+            'career_info': ['job', 'career', 'industry', 'experience', 'skills', 'resume', 'cv'],
+            'business_info': ['company', 'organization', 'team', 'employee', 'department', 'role']
         }
         
         # Track tested elements to avoid duplicates
@@ -734,6 +766,256 @@ class WebsiteIntelligence:
                 })
         
         return test_cases
+    
+    def generate_educational_test_steps(self, element_type, element_data, url):
+        """Generate detailed task-specific test steps for educational platform functionality"""
+        test_steps = []
+        
+        if element_type == 'course_category':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Locate the '{element_data['name']}' category section",
+                f"3. Click on the '{element_data['name']}' category link",
+                f"4. Verify the category page loads with course listings",
+                f"5. Check that course count displays correctly ({element_data.get('count', 'N/A')} courses)",
+                f"6. Verify course filtering and sorting options are available",
+                f"7. Test course preview functionality"
+            ]
+        elif element_type == 'learning_action':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Find the '{element_data['action']}' button/link",
+                f"3. Click on the '{element_data['action']}' element",
+                f"4. Verify the learning interface loads correctly",
+                f"5. Check that course progress tracking is functional",
+                f"6. Test video/audio playback if applicable",
+                f"7. Verify quiz/assessment functionality",
+                f"8. Test certificate generation upon completion"
+            ]
+        elif element_type == 'career_tool':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Locate the '{element_data['tool']}' section",
+                f"3. Click on the '{element_data['tool']}' tool",
+                f"4. Verify the tool interface loads correctly",
+                f"5. Test input functionality for {element_data['tool']}",
+                f"6. Verify results are generated and displayed",
+                f"7. Test export/save functionality if available",
+                f"8. Check that tool recommendations are relevant"
+            ]
+        elif element_type == 'app_download':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Locate the mobile app download section",
+                f"3. Verify QR code is displayed and scannable",
+                f"4. Test app download button functionality",
+                f"5. Verify app store links work correctly",
+                f"6. Test app features preview if available",
+                f"7. Verify offline learning capability is mentioned",
+                f"8. Check app compatibility information"
+            ]
+        elif element_type == 'business_solution':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Locate the business/LMS section",
+                f"3. Click on business solution link",
+                f"4. Verify business solutions page loads",
+                f"5. Test LMS demo or trial functionality",
+                f"6. Verify team management features",
+                f"7. Test employee training tracking",
+                f"8. Check pricing and plan options"
+            ]
+        elif element_type == 'social_feature':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Locate the '{element_data['feature']}' section",
+                f"3. Click on the social feature element",
+                f"4. Verify social functionality loads correctly",
+                f"5. Test sharing capabilities if applicable",
+                f"6. Verify affiliate program signup process",
+                f"7. Test referral system functionality",
+                f"8. Check community features and interactions"
+            ]
+        elif element_type == 'search_functionality':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Locate the search bar or 'Explore Courses' section",
+                f"3. Enter a search term (e.g., 'Business Management')",
+                f"4. Click search or press Enter",
+                f"5. Verify search results are displayed",
+                f"6. Test search filters and sorting options",
+                f"7. Verify course preview functionality",
+                f"8. Test course enrollment process from search results"
+            ]
+        elif element_type == 'user_registration':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Click on 'Sign Up' or 'Create Account'",
+                f"3. Fill in required registration fields",
+                f"4. Verify email validation works correctly",
+                f"5. Test password strength requirements",
+                f"6. Submit the registration form",
+                f"7. Verify account creation confirmation",
+                f"8. Test email verification process"
+            ]
+        elif element_type == 'course_enrollment':
+            test_steps = [
+                f"1. Navigate to {url}",
+                f"2. Browse available courses",
+                f"3. Select a specific course",
+                f"4. Click 'Start Course' or 'Enroll'",
+                f"5. Verify enrollment confirmation",
+                f"6. Test course dashboard access",
+                f"7. Verify learning progress tracking",
+                f"8. Test course completion and certificate generation"
+            ]
+        
+        return test_steps
+    
+    def detect_educational_elements(self, soup, url):
+        """Detect educational platform elements and their functionality"""
+        educational_elements = {
+            'course_categories': [],
+            'learning_actions': [],
+            'career_tools': [],
+            'app_features': [],
+            'business_solutions': [],
+            'social_features': [],
+            'search_functionality': [],
+            'user_management': []
+        }
+        
+        # Detect course categories
+        for category in soup.find_all(['a', 'div', 'span'], string=re.compile(r'(IT|Health|Language|Business|Management|Personal Development|Sales|Marketing|Engineering|Teaching|Academics)', re.I)):
+            if category.get_text().strip():
+                alison_elements['course_categories'].append({
+                    'name': category.get_text().strip(),
+                    'element': category.name,
+                    'href': category.get('href', ''),
+                    'count': self.extract_course_count(category)
+                })
+        
+        # Detect learning actions
+        for action in soup.find_all(['button', 'a'], string=re.compile(r'(Learn|Study|Enroll|Start Course|Begin Learning|Take Course|Complete|Continue)', re.I)):
+            if action.get_text().strip():
+                alison_elements['learning_actions'].append({
+                    'action': action.get_text().strip(),
+                    'element': action.name,
+                    'href': action.get('href', ''),
+                    'type': self.detect_learning_action_type(action)
+                })
+        
+        # Detect career tools
+        for tool in soup.find_all(['a', 'div'], string=re.compile(r'(Career|Job|Resume|CV|Profile|Assessment|Personality|Aptitude|Skills|Hire)', re.I)):
+            if tool.get_text().strip():
+                alison_elements['career_tools'].append({
+                    'tool': tool.get_text().strip(),
+                    'element': tool.name,
+                    'href': tool.get('href', ''),
+                    'type': self.detect_career_tool_type(tool)
+                })
+        
+        # Detect app features
+        for app in soup.find_all(['a', 'div'], string=re.compile(r'(App|Download|Mobile|Android|iOS|Play Store|App Store|QR Code|Scan)', re.I)):
+            if app.get_text().strip():
+                alison_elements['app_features'].append({
+                    'feature': app.get_text().strip(),
+                    'element': app.name,
+                    'href': app.get('href', ''),
+                    'type': self.detect_app_feature_type(app)
+                })
+        
+        # Detect business solutions
+        for business in soup.find_all(['a', 'div'], string=re.compile(r'(LMS|Business|Organization|Team|Employee|Training|Upskill|Corporate|Enterprise)', re.I)):
+            if business.get_text().strip():
+                alison_elements['business_solutions'].append({
+                    'solution': business.get_text().strip(),
+                    'element': business.name,
+                    'href': business.get('href', ''),
+                    'type': self.detect_business_solution_type(business)
+                })
+        
+        # Detect social features
+        for social in soup.find_all(['a', 'div'], string=re.compile(r'(Share|Affiliate|Refer|Friend|Community|Social|Network|Connect)', re.I)):
+            if social.get_text().strip():
+                alison_elements['social_features'].append({
+                    'feature': social.get_text().strip(),
+                    'element': social.name,
+                    'href': social.get('href', ''),
+                    'type': self.detect_social_feature_type(social)
+                })
+        
+        return educational_elements
+    
+    def extract_course_count(self, element):
+        """Extract course count from category element"""
+        text = element.get_text()
+        match = re.search(r'(\d+)\s*Courses?', text, re.I)
+        return match.group(1) if match else 'N/A'
+    
+    def detect_learning_action_type(self, element):
+        """Detect type of learning action"""
+        text = element.get_text().lower()
+        if 'start' in text or 'begin' in text:
+            return 'course_start'
+        elif 'enroll' in text or 'join' in text:
+            return 'course_enrollment'
+        elif 'continue' in text or 'resume' in text:
+            return 'course_continue'
+        elif 'complete' in text or 'finish' in text:
+            return 'course_completion'
+        else:
+            return 'general_learning'
+    
+    def detect_career_tool_type(self, element):
+        """Detect type of career tool"""
+        text = element.get_text().lower()
+        if 'resume' in text or 'cv' in text:
+            return 'resume_builder'
+        elif 'assessment' in text or 'personality' in text:
+            return 'assessment_tool'
+        elif 'job' in text or 'career' in text:
+            return 'job_search'
+        elif 'skills' in text:
+            return 'skills_assessment'
+        else:
+            return 'general_career'
+    
+    def detect_app_feature_type(self, element):
+        """Detect type of app feature"""
+        text = element.get_text().lower()
+        if 'download' in text or 'install' in text:
+            return 'app_download'
+        elif 'qr' in text or 'scan' in text:
+            return 'qr_code'
+        elif 'store' in text:
+            return 'app_store_link'
+        else:
+            return 'app_info'
+    
+    def detect_business_solution_type(self, element):
+        """Detect type of business solution"""
+        text = element.get_text().lower()
+        if 'lms' in text:
+            return 'learning_management_system'
+        elif 'training' in text or 'upskill' in text:
+            return 'employee_training'
+        elif 'corporate' in text or 'enterprise' in text:
+            return 'enterprise_solution'
+        else:
+            return 'business_tool'
+    
+    def detect_social_feature_type(self, element):
+        """Detect type of social feature"""
+        text = element.get_text().lower()
+        if 'affiliate' in text:
+            return 'affiliate_program'
+        elif 'refer' in text or 'friend' in text:
+            return 'referral_system'
+        elif 'share' in text:
+            return 'sharing_feature'
+        else:
+            return 'social_network'
 
 # Initialize the intelligence system
 website_intelligence = WebsiteIntelligence()
@@ -773,29 +1055,33 @@ def auto_fill_and_submit_form(form, base_url, username=None, password=None):
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-            page.goto(base_url, timeout=10000)
-            # Fill form fields
-            for name, value in form_data.items():
-                try:
-                    page.fill(f'input[name="{name}"]', str(value))
-                except Exception:
-                    pass
-            # Click the first submit button in the form
             try:
-                submit_selector = 'form button[type=submit], form input[type=submit]'
-                with page.expect_navigation(wait_until='networkidle', timeout=10000):
-                    page.click(submit_selector)
-            except Exception:
+                page.goto(base_url, timeout=15000)
+                # Fill form fields with better error handling
+                for name, value in form_data.items():
+                    try:
+                        page.fill(f'input[name="{name}"]', str(value), timeout=5000)
+                    except Exception:
+                        pass
+                # Click the first submit button in the form with shorter timeout
                 try:
-                    with page.expect_navigation(wait_until='networkidle', timeout=10000):
-                        page.evaluate('document.forms[0].submit()')
+                    submit_selector = 'form button[type=submit], form input[type=submit]'
+                    with page.expect_navigation(wait_until='networkidle', timeout=8000):
+                        page.click(submit_selector, timeout=5000)
                 except Exception:
-                    pass
-            # Wait for dashboard or error
+                    try:
+                        with page.expect_navigation(wait_until='networkidle', timeout=8000):
+                            page.evaluate('document.forms[0].submit()')
+                    except Exception:
+                        pass
+            except Exception as e:
+                browser.close()
+                return action, method, f'Form submission failed: {str(e)}', []
+            # Wait for dashboard or error with shorter timeout
             actual_result = ''
             dashboard_found = False
             try:
-                page.wait_for_selector('.oxd-topbar-header', timeout=7000)
+                page.wait_for_selector('.oxd-topbar-header', timeout=5000)
                 dashboard_found = True
             except PlaywrightTimeoutError:
                 try:
@@ -818,16 +1104,20 @@ def auto_fill_and_submit_form(form, base_url, username=None, password=None):
             # --- ENHANCED: Post-login dashboard testing with ML intelligence ---
             post_login_test_cases = []
             if dashboard_found or page.url != base_url:
-                from bs4 import BeautifulSoup
-                new_soup = BeautifulSoup(page.content(), 'html.parser')
-                # Extract further test cases (no login credentials for post-login page)
-                post_login_test_cases = extract_elements(new_soup, page.url)
-                for tc in post_login_test_cases:
-                    tc['Notes'] = f"[Post-login] {tc.get('Notes','')}"
-                
-                # --- NEW: ML-Enhanced Dashboard Testing ---
-                dashboard_test_cases = test_dashboard_functionality_ml(page, base_url)
-                post_login_test_cases.extend(dashboard_test_cases)
+                try:
+                    from bs4 import BeautifulSoup
+                    new_soup = BeautifulSoup(page.content(), 'html.parser')
+                    # Extract further test cases (no login credentials for post-login page)
+                    post_login_test_cases = extract_elements(new_soup, page.url)
+                    for tc in post_login_test_cases:
+                        tc['Notes'] = f"[Post-login] {tc.get('Notes','')}"
+                    
+                    # --- NEW: ML-Enhanced Dashboard Testing ---
+                    dashboard_test_cases = test_dashboard_functionality_ml(page, base_url)
+                    post_login_test_cases.extend(dashboard_test_cases)
+                except Exception as e:
+                    # If post-login testing fails, continue without it
+                    pass
                 
             browser.close()
         return action, method, actual_result, post_login_test_cases
@@ -1307,6 +1597,106 @@ def extract_elements(soup, base_url, username=None, password=None):
             'Notes': '[ML Intelligence - Optimized]'
         })
         
+        # --- EDUCATIONAL PLATFORM ANALYSIS ---
+        if analysis["website_type"] in ['educational', 'career_platform']:
+                # Detect educational platform elements
+                educational_elements = website_intelligence.detect_educational_elements(soup, base_url)
+                
+                # Generate educational platform test cases with detailed steps
+                for category in educational_elements['course_categories']:
+                    test_steps = website_intelligence.generate_educational_test_steps('course_category', category, base_url)
+                    test_cases.append({
+                        'Type': 'Course Category',
+                        'Action': f'Test {category["name"]} category functionality',
+                        'Element': f'{category["name"]} Category ({category.get("count", "N/A")} courses)',
+                        'Expected Result': f'{category["name"]} category should work correctly',
+                        'Actual Result': 'Course category test case generated',
+                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                    })
+                
+                for action in educational_elements['learning_actions']:
+                    test_steps = website_intelligence.generate_educational_test_steps('learning_action', action, base_url)
+                    test_cases.append({
+                        'Type': 'Learning Action',
+                        'Action': f'Test {action["action"]} functionality',
+                        'Element': f'{action["action"]} ({action["type"]})',
+                        'Expected Result': f'{action["action"]} should work correctly',
+                        'Actual Result': 'Learning action test case generated',
+                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                    })
+                
+                for tool in educational_elements['career_tools']:
+                    test_steps = website_intelligence.generate_educational_test_steps('career_tool', tool, base_url)
+                    test_cases.append({
+                        'Type': 'Career Tool',
+                        'Action': f'Test {tool["tool"]} functionality',
+                        'Element': f'{tool["tool"]} ({tool["type"]})',
+                        'Expected Result': f'{tool["tool"]} should work correctly',
+                        'Actual Result': 'Career tool test case generated',
+                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                    })
+                
+                for app in educational_elements['app_features']:
+                    test_steps = website_intelligence.generate_educational_test_steps('app_download', app, base_url)
+                    test_cases.append({
+                        'Type': 'App Feature',
+                        'Action': f'Test {app["feature"]} functionality',
+                        'Element': f'{app["feature"]} ({app["type"]})',
+                        'Expected Result': f'{app["feature"]} should work correctly',
+                        'Actual Result': 'App feature test case generated',
+                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                    })
+                
+                for solution in educational_elements['business_solutions']:
+                    test_steps = website_intelligence.generate_educational_test_steps('business_solution', solution, base_url)
+                    test_cases.append({
+                        'Type': 'Business Solution',
+                        'Action': f'Test {solution["solution"]} functionality',
+                        'Element': f'{solution["solution"]} ({solution["type"]})',
+                        'Expected Result': f'{solution["solution"]} should work correctly',
+                        'Actual Result': 'Business solution test case generated',
+                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                    })
+                
+                for social in educational_elements['social_features']:
+                    test_steps = website_intelligence.generate_educational_test_steps('social_feature', social, base_url)
+                    test_cases.append({
+                        'Type': 'Social Feature',
+                        'Action': f'Test {social["feature"]} functionality',
+                        'Element': f'{social["feature"]} ({social["type"]})',
+                        'Expected Result': f'{social["feature"]} should work correctly',
+                        'Actual Result': 'Social feature test case generated',
+                        'Notes': f'[Educational Platform] Test Steps: {" | ".join(test_steps)}'
+                    })
+                
+                # Add general educational platform functionality tests
+                test_cases.append({
+                    'Type': 'Educational Platform',
+                    'Action': 'Test course search functionality',
+                    'Element': 'Course Search',
+                    'Expected Result': 'Search should find relevant courses',
+                    'Actual Result': 'Course search test case generated',
+                    'Notes': '[Educational Platform] Test Steps: 1. Navigate to website | 2. Locate search bar | 3. Enter course name | 4. Verify results | 5. Test filters | 6. Test course preview'
+                })
+                
+                test_cases.append({
+                    'Type': 'Educational Platform',
+                    'Action': 'Test user registration process',
+                    'Element': 'User Registration',
+                    'Expected Result': 'Registration should create account successfully',
+                    'Actual Result': 'Registration test case generated',
+                    'Notes': '[Educational Platform] Test Steps: 1. Click Sign Up | 2. Fill required fields | 3. Verify email validation | 4. Submit form | 5. Check confirmation | 6. Test email verification'
+                })
+                
+                test_cases.append({
+                    'Type': 'Educational Platform',
+                    'Action': 'Test course enrollment process',
+                    'Element': 'Course Enrollment',
+                    'Expected Result': 'Enrollment should grant course access',
+                    'Actual Result': 'Enrollment test case generated',
+                    'Notes': '[Educational Platform] Test Steps: 1. Browse courses | 2. Select course | 3. Click Start Course | 4. Verify enrollment | 5. Access course content | 6. Track progress'
+                })
+        
     except Exception as e:
         test_cases.append({
             'Type': 'Analysis',
@@ -1509,14 +1899,19 @@ def get_soup_from_url_playwright(url, wait_for_selector='form', timeout=10000):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(url, timeout=timeout)
         try:
-            page.wait_for_selector(wait_for_selector, timeout=timeout)
-        except Exception:
-            pass  # If no form appears, just continue
-        html = page.content()
-        browser.close()
-    return BeautifulSoup(html, 'html.parser')
+            page.goto(url, timeout=timeout)
+            try:
+                page.wait_for_selector(wait_for_selector, timeout=5000)
+            except Exception:
+                pass  # If no form appears, just continue
+            html = page.content()
+        except Exception as e:
+            print(f"Playwright failed to load {url}: {e}")
+            html = ""
+        finally:
+            browser.close()
+    return BeautifulSoup(html, 'html.parser') if html else None
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Website Test Case Generator')
